@@ -1,15 +1,17 @@
 # tnfshbot
-A forwarding robot made suddenly.
+南一中校網爬蟲機器人
 ## 食油餅嗎?
 記得
-```
+`
 pip install asyncio aiohttp bs4 discord
-```
-## 版本
-這個專案目前為v1.0版本
-主程式碼為ChatGPT所產出，網頁爬蟲修改(web crawler.py)則是Bing AI產出，之後合併進主程式
-大概98%的code都是它們產的
-v1.1
-新增交作業用的colab版
+`
+
+還要建立constants.py放token和channel ID
+## 關於本資料庫
+這是fork出來，拿來繳作業的
+
+Main Repository在[這裡](https://github.com/MungbeanOuO/tnfshbot)
+
+主程式"你幹嘛_唉呦.py"
 ## 已知~feature~
-更新是直接重新輸出公告，會導致洗頻
+~洗頻神器~
