@@ -5,10 +5,10 @@ import discord
 import constants
 
 intents = discord.Intents().all()
+intents.message_content = True
 
 # 設定網站 URL
 URL = 'https://www.tnfsh.tn.edu.tw/latestevent/index.aspx?Parser=9,3,19'
-
 
 # 設定定時更新的時間間隔（單位為秒）
 UPDATE_INTERVAL = 3600  # 每小時更新一次
@@ -16,6 +16,9 @@ UPDATE_INTERVAL = 3600  # 每小時更新一次
 # 建立 Discord 客戶端
 client = discord.Client(intents=intents)
 
+#讀取json，輸出command list
+async def command_list():
+     return
 # 定義更新公告的函式
 async def update_announcement():
     # 發送 HTTP GET 請求取得網頁內容
@@ -30,13 +33,13 @@ async def update_announcement():
 
     # 找到所有的表格元素
     ul = soup.find("ul", class_="list list_type")
-    
+
     if not ul:
         raise ValueError("找不到目標元素")
-    
+
     # 找到每一個項目
     items = ul.find_all("li")
-    
+
     # 取得指定聊天頻道的物件
     print('Getting Discord channel...')
     channel = client.get_channel(constants.DISCORD_CHANNEL_ID)
@@ -60,25 +63,41 @@ async def update_announcement():
             message_lines[1] = "發布單位: " + message_lines[1]
             message_lines[2] = "發布日期: " + message_lines[2]
             message = '\n'.join(message_lines)
-
-            await channel.send(message)
-
             if "置頂" in message:
                 # 讓置頂更好看
                 message = f"[{message[:2]}] {message[2:]}"
-                await channel.send(message)
+            await channel.send(message)
+
+
+
 
 # 當 Discord bot 客戶端啟動時執行
 @client.event
 async def on_ready():
     print('Logged in as {0.user}'.format(client))
- 
+
     # 每隔指定的時間更新一次公告
     while True:
         print('Updating announcement...')
-        await update_announcement()
+        #await update_announcement()
         await asyncio.sleep(UPDATE_INTERVAL)
+
+@client.event
+async def on_message(message):
+    if message.channel != client.get_channel(constants.DISCORD_CHANNEL_ID):
+        return
+    if message.author == client.user:
+        return
+    if message.content.startswith("t!"):
+        usermsg = message.content.split("!")
+        if usermsg[1] == "help":
+            await message.channel.send("Please send `t!command` to check command list")
+        if usermsg[1] == "news":
+            print('Updating announcement...')
+            await update_announcement()
+        if usermsg[1] == "command":
+            await command_list()#還在做，目前想讓他輸出線上json，這樣就不用塞文字進來了
+
 
 # 啟動 Discord bot 客戶端
 client.run(constants.DISCORD_TOKEN)
-
