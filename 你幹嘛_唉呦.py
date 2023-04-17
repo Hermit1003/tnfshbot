@@ -3,7 +3,6 @@ from functools import partial
 import aiohttp
 from bs4 import BeautifulSoup
 import discord
-import webbrowser
 import constants
 
 intents = discord.Intents().all()
@@ -23,20 +22,21 @@ client = discord.Client(intents=intents)
 async def command_list():
      return
 
+#DM用戶公告詳情
 async def show_details(url: str, interaction: discord.Interaction):
     user = interaction.user
     try:
-        await user.send(f"Here is the details for {url}")
+        await user.send(f"已訂選公告: {url}")
     except discord.Forbidden:
         # 如果用戶關閉了私人訊息，將無法發送訊息
-        await interaction.response.send_message("I couldn't send you the details because your DM is closed.")
+        await interaction.response.send_message("很遺憾的，您的私訊功能已關閉，我無法傳送訊息給您TAT")
     except Exception as e:
         # 其他異常情況
-        await interaction.response.send_message(f"An error occurred while sending the details: {str(e)}")
+        await interaction.response.send_message(f"錯誤發生，請回報錯誤代碼給相關人員: {str(e)}")
 
 
 # 定義更新公告的函式
-async def update_announcement():
+async def update_announcement(f: int, l: int):
     # 發送 HTTP GET 請求取得網頁內容
     print('Sending HTTP GET request...')
     async with aiohttp.ClientSession() as session:
@@ -66,10 +66,8 @@ async def update_announcement():
     # 發送訊息到指定聊天頻道
     print('Sending message to Discord channel...')
 
-    # 建立 Discord 訊息
-    #message = ''
     # 以下修改為只顯示前五則
-    for i, item in enumerate(items[1:6]):
+    for i, item in enumerate(items[f:l]):
         message = item.get_text().strip()
         url = item.find("a")["href"]
         url = f"https://www.tnfsh.tn.edu.tw/latestevent/{url}"
@@ -87,7 +85,7 @@ async def update_announcement():
             button_go_to_announcement = discord.ui.Button(label="前往公告", url=f"{url}")
             view.add_item(button_go_to_announcement)
 
-            button_show_details = discord.ui.Button(label="顯示詳細資訊")
+            button_show_details = discord.ui.Button(label="釘選至私人訊息", style=discord.ButtonStyle.primary)
             button_show_details.callback = partial(show_details, url)
 
             view.add_item(button_show_details)
@@ -118,7 +116,7 @@ async def on_message(message):
             await message.channel.send("Please send `t!command` to check command list.")
         if usermsg[1] == "news":
             print('Updating announcement...')
-            await update_announcement()
+            await update_announcement(1, 6)
         if usermsg[1] == "command":
             await command_list()#還在做，目前想讓他輸出線上json，這樣就不用塞文字進來了
 
