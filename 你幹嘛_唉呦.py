@@ -1,4 +1,5 @@
 import asyncio
+from functools import partial
 import aiohttp
 from bs4 import BeautifulSoup
 import discord
@@ -18,8 +19,22 @@ UPDATE_INTERVAL = 3600  # 每小時更新一次
 client = discord.Client(intents=intents)
 
 #讀取json，輸出command list
+
 async def command_list():
      return
+
+async def show_details(url: str, interaction: discord.Interaction):
+    user = interaction.user
+    try:
+        await user.send(f"Here is the details for {url}")
+    except discord.Forbidden:
+        # 如果用戶關閉了私人訊息，將無法發送訊息
+        await interaction.response.send_message("I couldn't send you the details because your DM is closed.")
+    except Exception as e:
+        # 其他異常情況
+        await interaction.response.send_message(f"An error occurred while sending the details: {str(e)}")
+
+
 # 定義更新公告的函式
 async def update_announcement():
     # 發送 HTTP GET 請求取得網頁內容
@@ -45,6 +60,9 @@ async def update_announcement():
     print('Getting Discord channel...')
     channel = client.get_channel(constants.DISCORD_CHANNEL_ID)
 
+    print('Getting UserID...')
+
+
     # 發送訊息到指定聊天頻道
     print('Sending message to Discord channel...')
 
@@ -52,9 +70,9 @@ async def update_announcement():
     #message = ''
     # 以下修改為只顯示前五則
     for i, item in enumerate(items[1:6]):
-        print(item)
         message = item.get_text().strip()
         url = item.find("a")["href"]
+        url = f"https://www.tnfsh.tn.edu.tw/latestevent/{url}"
         if not message:
             print("Announcement message is empty, skipping...")
         else:
@@ -66,8 +84,14 @@ async def update_announcement():
             if "置頂" in message:
                 message = f">>> {message[:2]}[{message[2:4]}]{message[4:]}"
             view = discord.ui.View()
-            button = discord.ui.Button(label="前往公告", url=f"https://www.tnfsh.tn.edu.tw/latestevent/{url}")
-            view.add_item(button)
+            button_go_to_announcement = discord.ui.Button(label="前往公告", url=f"{url}")
+            view.add_item(button_go_to_announcement)
+
+            button_show_details = discord.ui.Button(label="顯示詳細資訊")
+            button_show_details.callback = partial(show_details, url)
+
+            view.add_item(button_show_details)
+
             await channel.send(message, view=view)
 
 
