@@ -2,6 +2,7 @@ import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
 import discord
+import webbrowser
 import constants
 
 intents = discord.Intents().all()
@@ -48,27 +49,26 @@ async def update_announcement():
     print('Sending message to Discord channel...')
 
     # 建立 Discord 訊息
-    message = ''
+    #message = ''
     # 以下修改為只顯示前五則
-    for i, item in enumerate(items):
-        if i >= 5:
-            break
-
+    for i, item in enumerate(items[1:6]):
+        print(item)
         message = item.get_text().strip()
+        url = item.find("a")["href"]
         if not message:
             print("Announcement message is empty, skipping...")
         else:
-            # 修改訊息格式，加上發布單位和發布日期
             message_lines = message.split('\n')
+            message_lines[0] = "**" + message_lines[0] + "**"
             message_lines[1] = "發布單位: " + message_lines[1]
             message_lines[2] = "發布日期: " + message_lines[2]
             message = '\n'.join(message_lines)
             if "置頂" in message:
-                # 讓置頂更好看
-                message = f"[{message[:2]}] {message[2:]}"
-            await channel.send(message)
-
-
+                message = f">>> {message[:2]}[{message[2:4]}]{message[4:]}"
+            view = discord.ui.View()
+            button = discord.ui.Button(label="前往公告", url=f"https://www.tnfsh.tn.edu.tw/latestevent/{url}")
+            view.add_item(button)
+            await channel.send(message, view=view)
 
 
 # 當 Discord bot 客戶端啟動時執行
@@ -91,7 +91,7 @@ async def on_message(message):
     if message.content.startswith("t!"):
         usermsg = message.content.split("!")
         if usermsg[1] == "help":
-            await message.channel.send("Please send `t!command` to check command list")
+            await message.channel.send("Please send `t!command` to check command list.")
         if usermsg[1] == "news":
             print('Updating announcement...')
             await update_announcement()
