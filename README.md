@@ -3,7 +3,7 @@
 ## 食油餅嗎?
 記得
 `
-pip install asyncio aiohttp bs4 discord
+pip install asyncio aiohttp bs4 discord requests
 `
 
 還要建立constants.py放token和channel ID
