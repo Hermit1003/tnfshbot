@@ -1,3 +1,4 @@
+#latest changes at 2023.4.19 23:42 with PyCharm
 import asyncio
 from functools import partial
 import aiohttp
@@ -6,8 +7,10 @@ import discord
 import constants
 import requests
 import json
+from discord.ext import commands
 
-intents = discord.Intents().all()
+# 設定 intents
+intents = discord.Intents.default()
 intents.message_content = True
 
 # 設定網站 URL
@@ -16,8 +19,8 @@ URL = 'https://www.tnfsh.tn.edu.tw/latestevent/index.aspx?Parser=9,3,19'
 # 設定定時更新的時間間隔（單位為秒）
 UPDATE_INTERVAL = 3600  # 每小時更新一次
 
-# 建立 Discord 客戶端
-client = discord.Client(intents=intents)
+# 建立 Bot 實例，指定自訂的指令前綴詞
+bot = commands.Bot(command_prefix='t!', intents=intents)
 
 #讀取json，輸出command list
 async def command_list(message):
@@ -32,7 +35,7 @@ async def command_list(message):
         # 使用 json.loads() 函數解析 JSON 檔案的內容為 Python 字典物件
         command_list = json.loads(response.text)
         # 現在 command_list 變數中就包含了 JSON 檔案的內容，可以直接使用
-        await message.channel.send(f"> **help**:{command_list['help']}\n> **command**:{command_list['command']}\n> **news**:{command_list['news']}\n{command_list['tip']}")
+        await message.channel.send(f"> **info**:{command_list['info']}\n> **command**:{command_list['command']}\n> **news**:{command_list['news']}\n{command_list['tip']}")
     else:
         print("無法取得 JSON 檔案，錯誤碼:", response.status_code)
 
@@ -75,7 +78,7 @@ async def update_announcement(f: int, l: int):
 
     # 取得指定聊天頻道的物件
     print('Getting Discord channel...')
-    channel = client.get_channel(constants.DISCORD_CHANNEL_ID)
+    channel = bot.get_channel(constants.DISCORD_CHANNEL_ID)
 
     # 發送訊息到指定聊天頻道
     print('Sending message to Discord channel...')
@@ -109,9 +112,9 @@ async def update_announcement(f: int, l: int):
 
 
 # 當 Discord bot 客戶端啟動時執行
-@client.event
+@bot.event
 async def on_ready():
-    print('Logged in as {0.user}'.format(client))
+    print('Logged in as {0.user}'.format(bot))
 
     # 每隔指定的時間更新一次公告
     while True:
@@ -119,22 +122,32 @@ async def on_ready():
         #await update_announcement()
         await asyncio.sleep(UPDATE_INTERVAL)
 
-@client.event
+@bot.event
 async def on_message(message):
-    if message.channel != client.get_channel(constants.DISCORD_CHANNEL_ID):
+    await bot.process_commands(message)  # 讓 Bot 能夠處理指令
+    if message.channel != bot.get_channel(constants.DISCORD_CHANNEL_ID):
         return
-    if message.author == client.user:
+    if message.author == bot.user:
         return
-    if message.content.startswith("t!"):
-        usermsg = message.content.split("!")
-        if usermsg[1] == "help":
-            await message.channel.send("發送`t!command`來獲取指令列表")
-        if usermsg[1] == "news":
-            print('Updating announcement...')
-            await update_announcement(1, 6)
-        if usermsg[1] == "command":
-            await command_list(message)#還在做，目前想讓他輸出線上json，這樣就不用塞文字進來了
 
+@bot.command()
+async def info(ctx):
+    #顯示指令列表
+    await ctx.send("發送 `t!command` 來獲取指令列表")
 
-# 啟動 Discord bot 客戶端
-client.run(constants.DISCORD_TOKEN)
+@bot.command()
+async def news(ctx):
+    #手動觸發公告更新
+    print('Updating announcement...')
+    await update_announcement(1, 6)
+
+@bot.command()
+async def command(ctx):
+    #顯示指令列表
+    await command_list(ctx.message)
+
+# 禁用 t!help 指令
+bot.remove_command('help')
+
+# 啟動 Discord Bot
+bot.run(constants.DISCORD_TOKEN)
