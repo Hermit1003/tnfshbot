@@ -21,6 +21,15 @@ UPDATE_INTERVAL = 3600  # 每小時更新一次
 # 建立 Bot 實例，指定自訂的指令前綴詞
 bot = commands.Bot(command_prefix='t!', intents=intents)
 
+#讀取文字json，以便後續使用
+txt_url = "https://raw.githubusercontent.com/Hermit1003/tnfshbot/main/txt.json"
+# 發送 GET 請求取得 JSON 檔案的內容
+txt_response = requests.get(txt_url)
+# 檢查請求是否成功(200成功)
+if txt_response.status_code == 200:
+    # 使用 json.loads() 函數解析 JSON 檔案的內容為 Python 字典物件
+    txt = json.loads(txt_response.text)
+
 #讀取json，輸出command list
 async def command_list(ctx):
     # 指定 JSON 檔案的網址
@@ -123,7 +132,7 @@ async def on_ready():
 async def on_command_error(ctx, error):
     if isinstance(error, commands.BadArgument):
         # 捕獲參數解析錯誤
-        await ctx.author.send("參數格式錯誤，請重新檢查。")
+        await ctx.author.send(txt["txt"][0])#("參數格式錯誤，請重新檢查。")
         return
     raise error  # 如果不是參數解析錯誤，則重新拋出異常
 
@@ -131,29 +140,29 @@ async def on_command_error(ctx, error):
 async def info(ctx):
     # 檢查訊息的來源頻道是否為指定的頻道
     if ctx.channel != bot.get_channel(constants.DISCORD_CHANNEL_ID):
-        await ctx.author.send("此指令僅能在指定的頻道內使用。")
+        await ctx.author.send(txt["txt"][1])#("此指令僅能在指定的頻道內使用。")
         return
     # 顯示指令列表
-    await ctx.reply("請在頻道發送 `t!command` 來獲取指令列表。", mention_author=False)
+    await ctx.reply(txt["txt"][2], mention_author=False)#("請在頻道發送 `t!command` 來獲取指令列表。")
 
 @bot.command()
 async def news(ctx, l: int = 10):
     # 檢查訊息的來源頻道是否為指定的頻道
     if ctx.channel != bot.get_channel(constants.DISCORD_CHANNEL_ID):
-        await ctx.author.send("此指令僅能在指定的頻道內使用。")
+        await ctx.author.send(txt["txt"][1])#("此指令僅能在指定的頻道內使用。")
         return
     # 手動觸發公告更新
     print('Updating announcement...')
     if 1 <= l <= 18:
         await update_announcement(ctx, 1, l + 1)
     else:
-        await ctx.reply("由於技術限制，目前僅提供查看20條消息，請將參數設定在1至20之間。", mention_author=False)
+        await ctx.reply(txt["txt"][3], mention_author=False)#("由於技術限制，目前僅提供查看20條消息，請將參數設定在1至20之間。")
 
 @bot.command()
 async def command(ctx):
     # 檢查訊息的來源頻道是否為指定的頻道
     if ctx.channel != bot.get_channel(constants.DISCORD_CHANNEL_ID):
-        await ctx.author.send("此指令僅能在指定的頻道內使用。")
+        await ctx.author.send(txt["txt"][1])#("此指令僅能在指定的頻道內使用。")
         return
     #顯示指令列表
     await command_list(ctx)
@@ -161,10 +170,6 @@ async def command(ctx):
 @bot.command()
 @commands.is_owner()
 async def shutdown(ctx):
-    # 檢查訊息的來源頻道是否為指定的頻道
-    if ctx.channel != bot.get_channel(constants.DISCORD_CHANNEL_ID):
-        await ctx.author.send("此指令僅能在指定的頻道內使用。")
-        return
     # 關閉機器人(僅允許服主使用)
     exit()
 
