@@ -1,4 +1,3 @@
-#latest changes at 2023.4.19 23:42 with PyCharm
 import asyncio
 from functools import partial
 import aiohttp
@@ -23,7 +22,7 @@ UPDATE_INTERVAL = 3600  # 每小時更新一次
 bot = commands.Bot(command_prefix='t!', intents=intents)
 
 #讀取json，輸出command list
-async def command_list(message):
+async def command_list(ctx):
     # 指定 JSON 檔案的網址
     json_url = "https://raw.githubusercontent.com/Hermit1003/tnfshbot/main/command_list.json"
 
@@ -35,7 +34,7 @@ async def command_list(message):
         # 使用 json.loads() 函數解析 JSON 檔案的內容為 Python 字典物件
         command_list = json.loads(response.text)
         # 現在 command_list 變數中就包含了 JSON 檔案的內容，可以直接使用
-        await message.channel.send(f"> **info**:{command_list['info']}\n> **command**:{command_list['command']}\n> **news**:{command_list['news']}\n{command_list['tip']}")
+        await ctx.reply(f"> **info**:{command_list['info']}\n> **command**:{command_list['command']}\n> **news**:{command_list['news']}\n{command_list['tip']}", mention_author=False)
     else:
         print("無法取得 JSON 檔案，錯誤碼:", response.status_code)
 
@@ -56,7 +55,7 @@ async def show_details(url: str, title: str, interaction: discord.Interaction):
 
 
 # 定義更新公告的函式
-async def update_announcement(f: int, l: int):
+async def update_announcement(ctx, f: int, l: int):
     # 發送 HTTP GET 請求取得網頁內容
     print('Sending HTTP GET request...')
     async with aiohttp.ClientSession() as session:
@@ -76,10 +75,6 @@ async def update_announcement(f: int, l: int):
     # 找到每一個項目
     items = ul.find_all("li")
 
-    # 取得指定聊天頻道的物件
-    print('Getting Discord channel...')
-    channel = bot.get_channel(constants.DISCORD_CHANNEL_ID)
-
     # 發送訊息到指定聊天頻道
     print('Sending message to Discord channel...')
 
@@ -98,7 +93,9 @@ async def update_announcement(f: int, l: int):
             message = '\n'.join(message_lines)
             if "置頂" in message:
                 message = f">>> {message[:2]}[{message[2:4]}]{message[4:]}"
-                title = message_lines[0]
+            else:
+                message = f">>> {message}"
+            title = message_lines[0]
             view = discord.ui.View()
             button_go_to_announcement = discord.ui.Button(label="前往公告", url=f"{url}")
             view.add_item(button_go_to_announcement)
@@ -108,7 +105,7 @@ async def update_announcement(f: int, l: int):
 
             view.add_item(button_show_details)
 
-            await channel.send(message, view=view)
+            await ctx.send(message, view=view, mention_author=False)
 
 
 # 當 Discord bot 客戶端啟動時執行
@@ -123,28 +120,53 @@ async def on_ready():
         await asyncio.sleep(UPDATE_INTERVAL)
 
 @bot.event
-async def on_message(message):
-    await bot.process_commands(message)  # 讓 Bot 能夠處理指令
-    if message.channel != bot.get_channel(constants.DISCORD_CHANNEL_ID):
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.BadArgument):
+        # 捕獲參數解析錯誤
+        await ctx.author.send("參數格式錯誤，請重新檢查。")
         return
-    if message.author == bot.user:
-        return
+    raise error  # 如果不是參數解析錯誤，則重新拋出異常
 
 @bot.command()
 async def info(ctx):
-    #顯示指令列表
-    await ctx.send("發送 `t!command` 來獲取指令列表")
+    # 檢查訊息的來源頻道是否為指定的頻道
+    if ctx.channel != bot.get_channel(constants.DISCORD_CHANNEL_ID):
+        await ctx.author.send("此指令僅能在指定的頻道內使用。")
+        return
+    # 顯示指令列表
+    await ctx.reply("請在頻道發送 `t!command` 來獲取指令列表。", mention_author=False)
 
 @bot.command()
-async def news(ctx):
-    #手動觸發公告更新
+async def news(ctx, l: int = 10):
+    # 檢查訊息的來源頻道是否為指定的頻道
+    if ctx.channel != bot.get_channel(constants.DISCORD_CHANNEL_ID):
+        await ctx.author.send("此指令僅能在指定的頻道內使用。")
+        return
+    # 手動觸發公告更新
     print('Updating announcement...')
-    await update_announcement(1, 6)
+    if 1 <= l <= 18:
+        await update_announcement(ctx, 1, l + 1)
+    else:
+        await ctx.reply("由於技術限制，目前僅提供查看20條消息，請將參數設定在1至20之間。", mention_author=False)
 
 @bot.command()
 async def command(ctx):
+    # 檢查訊息的來源頻道是否為指定的頻道
+    if ctx.channel != bot.get_channel(constants.DISCORD_CHANNEL_ID):
+        await ctx.author.send("此指令僅能在指定的頻道內使用。")
+        return
     #顯示指令列表
-    await command_list(ctx.message)
+    await command_list(ctx)
+
+@bot.command()
+@commands.is_owner()
+async def shutdown(ctx):
+    # 檢查訊息的來源頻道是否為指定的頻道
+    if ctx.channel != bot.get_channel(constants.DISCORD_CHANNEL_ID):
+        await ctx.author.send("此指令僅能在指定的頻道內使用。")
+        return
+    # 關閉機器人(僅允許服主使用)
+    exit()
 
 # 禁用 t!help 指令
 bot.remove_command('help')
