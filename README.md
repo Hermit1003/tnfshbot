@@ -1,6 +1,6 @@
 # tnfshbot
 南一中校網爬蟲機器人
-## 食油餅嗎?
+## 操作指南
 記得
 `
 pip install asyncio aiohttp bs4 discord requests
